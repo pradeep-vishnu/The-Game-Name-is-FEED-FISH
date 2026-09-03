@@ -1,6 +1,7 @@
 <div align="center">
 
-<h1>🐟 FEED FISH </h1>
+<h1>🐟 FEED FISH </h1> </div>
+<h3><em>Survive the depths and the skies while feeding our catfish</em></h3>
 
 <div align="center"> <img src="demo.gif" width="600"> </div>
 
@@ -8,11 +9,7 @@
 [![Dependencies: None](https://img.shields.io/badge/Dependencies-Zero-emerald.svg)]()
 [![Platform: Web](https://img.shields.io/badge/Platform-Web%20%7C%20Mobile-blue.svg)]()
 
-<h1> 🎮 Play the Game </h1>
-No installation required!
-Simply download or clone this repository and open `index.html` in any modern desktop or mobile browser. 
-
-Play here : [FEED-FISH](https://pradeep-vishnu.github.io/The-Game-Name-is-FEED-FISH/)
+[**PLAY NOW**](#-quick-start) • [**HOW TO PLAY**](#-how-to-play) • [**FEATURES**](#-Features)
 
 ---
 
@@ -53,3 +50,10 @@ This project is an exploration of minimalist game development. The goal was to c
 
 ## 📄 License
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details. Feel free to fork, modify, and learn from the code!
+
+---
+
+## 🚀🎮  Quick Start
+
+No package managers, build steps, or server setups required.
+Play here : [FEED-FISH](https://pradeep-vishnu.github.io/The-Game-Name-is-FEED-FISH/)
