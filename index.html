@@ -130,7 +130,6 @@
 <script>
 /**
  * FEED CATFISH - Polished HTML5 Arcade Game 
- * 100% Crash-Proof Audio & Canvas Floating Texts
  */
 
 const COLORS = {
@@ -226,7 +225,7 @@ function loadStorage() {
 }
 function saveStorage() { try { localStorage.setItem('feedCatfishData', JSON.stringify(userStorage)); } catch(e) {} }
 
-// --- Bug-Proof Audio System ---
+// --- Audio System ---
 function playSound(type) {
     if (soundsMuted) return;
     try {
@@ -266,7 +265,6 @@ function playSound(type) {
         osc.start(t);
         osc.stop(t + dur);
         
-        // Strict cleanup to prevent annoying continuous warning sounds
         setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch(err){} }, dur * 1000 + 100);
     } catch(e) {} // Fail silently without crashing the game
 }
