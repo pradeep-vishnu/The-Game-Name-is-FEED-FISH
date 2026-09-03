@@ -1,7 +1,7 @@
 <div align="center">
 
-<h1>🐟 FEED FISH </h1> </div>
-<h3><em>Survive the depths and the skies while feeding our catfish</em></h3>
+<h1>🐟 FEED FISH </h1> 
+<h3><em>Survive the depths and the skies while feeding our catfish</em></h3></div>
 
 <div align="center"> <img src="demo.gif" width="600"> </div>
 
