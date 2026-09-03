@@ -1,7 +1,9 @@
-<div align="center"> # 🐟 FEED FISH 
+<div align="center"> # 
+
+<h1>🐟 FEED FISH </h1>
 
 <video autoplay loop muted playsinline width="600">
-  <source src="demo.mp4" type="video/quicktime">
+  <source src="demo.mp4" type="video/mp4">
 </video>
 
 </div>
