@@ -7,7 +7,8 @@
 </video>
 
 </div>
-## 🎮 Play the Game
+
+🎮 Play the Game
 **No installation required!** 
 Simply download or clone this repository and open `index.html` in any modern desktop or mobile browser. 
 
