@@ -8,7 +8,7 @@ A fast-paced, minimalist HTML5 arcade survival game built entirely in a single f
 **No installation required!** 
 Simply download or clone this repository and open `index.html` in any modern desktop or mobile browser. 
 
-👉 **[Play Live]** *(https://pradeep-vishnu.github.io/The-Game-Name-is-FEED-FISH/)*
+Play here : [FEED-FISH](https://pradeep-vishnu.github.io/The-Game-Name-is-FEED-FISH/)
 
 ---
 
