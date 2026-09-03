@@ -1,9 +1,9 @@
 <div align="center">
 
 <h1>🐟 FEED FISH </h1> 
-<h3><em>Survive the depths and the skies while feeding our catfish</em></h3></div>
+<h3><em>Survive the depths and the skies while feeding our catfish</em></h3>
 
-<div align="center"> <img src="demo.gif" width="600"> </div>
+<img src="demo.gif" width="600">
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-gold.svg)](LICENSE)
 [![Dependencies: None](https://img.shields.io/badge/Dependencies-Zero-emerald.svg)]()
@@ -11,6 +11,7 @@
 
 [**PLAY NOW**](#-quick-start) • [**HOW TO PLAY**](#-how-to-play) • [**FEATURES**](#-Features)
 
+</div>
 ---
 
 ## 📖 How to Play
