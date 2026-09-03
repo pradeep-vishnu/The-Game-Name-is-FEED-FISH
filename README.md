@@ -12,7 +12,6 @@
 [**PLAY NOW**](#-quick-start) • [**HOW TO PLAY**](#-how-to-play) • [**FEATURES**](#-Features)
 
 </div>
----
 
 ## 📖 How to Play
 
