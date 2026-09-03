@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🐟</text></svg>">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FEED CATFISH</title>
+    <style>
+        :root {
+            --bg-color: #14191C;
+            --deep-water: #10181B;
+            --mid-water: #18252A;
+            --panel-bg: rgba(20, 25, 28, 0.94);
+            --accent: #68C8D7;
+            --highlight: #B8EAF0;
+            --predator: #541F2A;
+            --danger: #8E3D4B;
+            --gold: #FFD700;
+            --text-main: #E2E8F0;
+            --text-muted: #94A3B8;
+            --font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; user-select: none; touch-action: none; }
+        body, html { width: 100vw; height: 100dvh; background: var(--bg-color); color: var(--text-main); font-family: var(--font-family); overflow: hidden; }
+
+        #gameCanvas { display: block; width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 1; }
+        
+        #uiLayer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+
+        /* Panels */
+        .panel {
+            background: var(--panel-bg); border: 1px solid rgba(104, 200, 215, 0.25);
+            border-radius: 18px; padding: 30px; max-width: 500px; width: 90%;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); text-align: center;
+            pointer-events: auto; display: none; max-height: 90dvh; overflow-y: auto;
+        }
+        .panel.active { display: flex; flex-direction: column; animation: fadeIn 0.3s ease-out; }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+
+        h1 { color: var(--danger); margin-bottom: 20px; font-size: 2rem; letter-spacing: 2px; text-transform: uppercase; }
+        
+        button { background: var(--accent); color: var(--bg-color); border: none; padding: 15px 30px; font-size: 1.1rem; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; margin-top: 10px; text-transform: uppercase; transition: transform 0.1s, background 0.2s; pointer-events: auto; }
+        button:active { transform: scale(0.96); }
+        button:hover { background: var(--highlight); }
+
+        /* HUD */
+        #hud { position: absolute; top: 0; left: 0; width: 100%; padding: 20px; display: flex; justify-content: space-between; pointer-events: none; opacity: 0; transition: opacity 0.3s; z-index: 5; }
+        .hud-group { display: flex; gap: 30px; }
+        .hud-item { display: flex; flex-direction: column; }
+        .hud-label { font-size: 0.75rem; color: var(--accent); text-transform: uppercase; font-weight: bold; letter-spacing: 1px; }
+        .hud-val { font-size: 1.6rem; font-weight: bold; font-variant-numeric: tabular-nums; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 20px; }
+        .stat-box { background: rgba(0,0,0,0.2); padding: 12px; border-radius: 8px; }
+        .stat-lbl { font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+        .stat-val { font-size: 1.2rem; font-weight: bold; color: var(--accent); }
+
+        /* Graphs */
+        .graph-container { width: 100%; height: 160px; background: rgba(0,0,0,0.3); border-radius: 8px; margin-bottom: 20px; position: relative; }
+        .graph-canvas { width: 100%; height: 100%; display: block; }
+        .graph-title { position: absolute; top: 5px; left: 10px; font-size: 0.7rem; color: var(--text-muted); text-transform: uppercase; }
+
+        /* Achievement Toast */
+        #toast { position: absolute; bottom: 40px; background: rgba(20, 25, 28, 0.95); border: 1px solid var(--accent); border-radius: 12px; padding: 15px 25px; display: flex; align-items: center; gap: 15px; transform: translateY(150px) scale(0.9); opacity: 0; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); pointer-events: none; box-shadow: 0 10px 20px rgba(0,0,0,0.5); z-index: 20; }
+        #toast.show { transform: translateY(0) scale(1); opacity: 1; }
+        .toast-icon { font-size: 2rem; color: var(--accent); }
+        .toast-text { text-align: left; }
+        .toast-title { color: var(--highlight); font-weight: bold; font-size: 1.1rem; margin-bottom: 3px; text-transform: uppercase; }
+        .toast-desc { color: var(--text-main); font-size: 0.85rem; }
+
+        @media (max-width: 600px) {
+            .hud-group { gap: 15px; } .hud-val { font-size: 1.2rem; } .panel { padding: 20px; width: 95%; } 
+        }
+    </style>
+</head>
+<body>
+
+    <canvas id="gameCanvas"></canvas>
+
+    <div id="uiLayer">
+        <!-- HUD -->
+        <div id="hud">
+            <div class="hud-group">
+                <div class="hud-item"><span class="hud-label">Score</span><span class="hud-val" id="hud-score">0</span></div>
+                <div class="hud-item"><span class="hud-label">Speed</span><span class="hud-val" id="hud-speed">1.00&times;</span></div>
+            </div>
+            <div class="hud-item" style="text-align: right;"><span class="hud-label">Insects</span><span class="hud-val" id="hud-insects" style="color: var(--gold);">0</span></div>
+        </div>
+
+        <!-- Unified Run Stats Panel -->
+        <div id="panel-results" class="panel">
+            <h1 id="res-title">SWIM OVER</h1>
+            
+            <div class="stats-grid">
+                <div class="stat-box"><div class="stat-lbl">Score</div><div class="stat-val" id="st-score">0</div></div>
+                <div class="stat-box"><div class="stat-lbl">Insects</div><div class="stat-val" id="st-insects">0</div></div>
+                <div class="stat-box"><div class="stat-lbl">Max Speed</div><div class="stat-val" id="st-speed">1.00&times;</div></div>
+                <div class="stat-box"><div class="stat-lbl">Max Combo</div><div class="stat-val" id="st-combo">0</div></div>
+                <div class="stat-box"><div class="stat-lbl">Survival</div><div class="stat-val" id="st-time">00:00</div></div>
+                <div class="stat-box"><div class="stat-lbl">Distance</div><div class="stat-val" id="st-dist">0m</div></div>
+            </div>
+            
+            <div id="st-achievements" style="text-align:left; margin-bottom: 20px; display:none;">
+                <div class="stat-lbl" style="margin-bottom: 10px;">Unlocked This Run</div>
+                <div id="st-ach-list" style="color: var(--highlight); font-size: 0.9rem;"></div>
+            </div>
+
+            <div class="graph-container">
+                <div class="graph-title">Score Progression</div>
+                <canvas id="graph-canvas" class="graph-canvas"></canvas>
+            </div>
+
+            <button id="btn-play-again">Play Again</button>
+        </div>
+
+        <!-- Toast -->
+        <div id="toast">
+            <div class="toast-icon">⚡</div>
+            <div class="toast-text">
+                <div class="toast-title" id="toast-title">Achievement</div>
+                <div class="toast-desc" id="toast-desc">Desc</div>
+            </div>
+        </div>
+    </div>
+
+<script>
+/**
+ * FEED CATFISH - Polished HTML5 Arcade Game 
+ * 100% Crash-Proof Audio & Canvas Floating Texts
+ */
+
+const COLORS = {
+    bg: '#14191C', deep: '#10181B', mid: '#18252A', accent: '#68C8D7', highlight: '#B8EAF0',
+    predator: '#541F2A', danger: '#8E3D4B', gold: '#FFD700', plant: '#3E5C55', fish: '#73878B',
+    catfish: '#8FA3A8', catfishBelly: '#B0BEC1', fin: '#61747A'
+};
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d', { alpha: false });
+let W, H, dpr;
+
+const GAME_STATES = { PLAYING: 1, DEATH_ANIM: 2, RUN_OVER: 3 };
+let currentState;
+
+let lastTime = 0;
+let audioCtx;
+let soundsMuted = false;
+
+// Session Tracking
+let sessionResults = []; 
+
+// Storage Initialization
+let userStorage = { achievements: [], personalBest: { score: 0, speed: 0, insects: 0, time: 0, combo: 0 } };
+
+// Game Variables
+let worldX = 0, runTime = 0, speedMultiplier = 1.0;
+let waterY, bottomY, ceilingY, BASE_SPEED = 300; 
+
+let currentRun = { score: 0, insects: 0, maxCombo: 0, distance: 0, survivalTime: 0, history: [], newAchievements: [] };
+let comboCount = 0, comboTimer = 0;
+
+let catfish, sharks = [], vultures = [], insects = [], particles = [], envObjects = [], floatingTexts = [];
+let nextSharkX = 0, nextVultureX = 0, nextInsectX = 0;
+
+const ACHIEVEMENTS = {
+    'first_blood': { title: 'First Splash', desc: 'Reach 500 points', check: r => r.score >= 500 },
+    'hungry': { title: 'Hungry Catfish', desc: 'Catch 10 insects', check: r => r.insects >= 10 },
+    'hunter': { title: 'Insect Hunter', desc: 'Catch 25 insects', check: r => r.insects >= 25 },
+    'swarm_master': { title: 'Swarm Master', desc: 'Catch 5 insects in one combo', check: r => r.maxCombo >= 5 },
+    'silver': { title: 'Silver Swimmer', desc: 'Reach 5,000 points', check: r => r.score >= 5000 },
+    'gold': { title: 'Gold Swimmer', desc: 'Reach 10,000 points', check: r => r.score >= 10000 },
+    'speed_demon': { title: 'Speed Demon', desc: 'Reach 1.50× speed', check: r => speedMultiplier >= 1.5 },
+    'maximum_current': { title: 'Maximum Current', desc: 'Reach 2.00× speed', check: r => speedMultiplier >= 2.0 },
+    'long_haul': { title: 'Long Haul', desc: 'Survive 120 seconds', check: r => runTime >= 120 }
+};
+
+let toastQueue = [];
+let toastActive = false;
+
+// --- Initialization & Resize ---
+function init() {
+    loadStorage();
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+    
+    // Global inputs for gameplay
+    window.addEventListener('keydown', handleGlobalInput);
+    window.addEventListener('pointerdown', handleGlobalInput); 
+    window.addEventListener('contextmenu', (e) => { e.preventDefault(); }); 
+
+    document.getElementById('btn-play-again').addEventListener('click', (e) => { e.stopPropagation(); startRun(); });
+    
+    startRun();
+    requestAnimationFrame(loop);
+}
+
+function resizeCanvas() {
+    dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth || 800; 
+    H = window.innerHeight || 600;
+    canvas.width = W * dpr; canvas.height = H * dpr;
+    ctx.scale(dpr, dpr);
+    
+    waterY = H * 0.55;
+    bottomY = H * 0.95;
+    ceilingY = 85; 
+    BASE_SPEED = W * 0.4;
+}
+
+function loadStorage() { 
+    try { 
+        const data = localStorage.getItem('feedCatfishData'); 
+        if(data) {
+            let parsed = JSON.parse(data);
+            if(parsed && typeof parsed === 'object') {
+                if(parsed.personalBest) userStorage.personalBest = parsed.personalBest;
+                if(Array.isArray(parsed.achievements)) userStorage.achievements = parsed.achievements;
+            }
+        }
+    } catch(e) { console.warn("Resetting local storage format."); } 
+    if (!Array.isArray(userStorage.achievements)) userStorage.achievements = [];
+}
+function saveStorage() { try { localStorage.setItem('feedCatfishData', JSON.stringify(userStorage)); } catch(e) {} }
+
+// --- Bug-Proof Audio System ---
+function playSound(type) {
+    if (soundsMuted) return;
+    try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === 'suspended') { audioCtx.resume().catch(()=>{}); return; } // Skip queuing if frozen
+        
+        const t = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain); gain.connect(audioCtx.destination);
+        
+        let dur = 0.1;
+        gain.gain.setValueAtTime(0, t); // Default safely
+
+        if (type === 'jump') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(200, t); osc.frequency.exponentialRampToValueAtTime(400, t + 0.15);
+            gain.gain.setValueAtTime(0.2, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.15);
+            dur = 0.15;
+        } else if (type === 'insect') {
+            osc.type = 'triangle'; osc.frequency.setValueAtTime(800, t); osc.frequency.exponentialRampToValueAtTime(1400, t + 0.1);
+            gain.gain.setValueAtTime(0.15, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.1);
+            dur = 0.1;
+        } else if (type === 'combo') {
+            osc.type = 'square'; osc.frequency.setValueAtTime(600 + Math.min(10, comboCount)*100, t);
+            gain.gain.setValueAtTime(0.2, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.2);
+            dur = 0.2;
+        } else if (type === 'death') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, t); osc.frequency.exponentialRampToValueAtTime(40, t + 0.4);
+            gain.gain.setValueAtTime(0.4, t); gain.gain.exponentialRampToValueAtTime(0.01, t + 0.4);
+            dur = 0.4;
+        } else if (type === 'achieve') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(400, t); osc.frequency.setValueAtTime(600, t+0.1); osc.frequency.setValueAtTime(800, t+0.2);
+            gain.gain.setValueAtTime(0.3, t); gain.gain.linearRampToValueAtTime(0, t+0.6);
+            dur = 0.6;
+        }
+
+        osc.start(t);
+        osc.stop(t + dur);
+        
+        // Strict cleanup to prevent annoying continuous warning sounds
+        setTimeout(() => { try { osc.disconnect(); gain.disconnect(); } catch(err){} }, dur * 1000 + 100);
+    } catch(e) {} // Fail silently without crashing the game
+}
+
+// --- UI Management ---
+function showPanel(id) {
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    if(id) document.getElementById(id).classList.add('active');
+}
+
+function startRun() {
+    currentState = GAME_STATES.PLAYING;
+    showPanel(null); 
+    document.getElementById('hud').style.opacity = '1';
+    if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume().catch(()=>{});
+    resetGameLogic();
+}
+
+function handleGlobalInput(e) {
+    if (e.target && e.target.tagName && e.target.tagName === 'BUTTON') return; 
+    if (e.type === 'keydown') {
+        if(e.key === ' ' || e.key === 'ArrowUp' || e.key === 'ArrowDown') e.preventDefault();
+    }
+    // Init Audio Context on first ever interaction 
+    if (!audioCtx && e.type === 'pointerdown') audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+    if (currentState === GAME_STATES.PLAYING && catfish && !catfish.dead) {
+        catfish.lastJumpTime = runTime;
+        let maxUp = H * 1.5;
+        let impulse = H * 0.65;
+        catfish.vy -= impulse;
+        playSound('jump');
+        
+        if (catfish.y > waterY) {
+            for(let i=0; i<3; i++) spawnParticle(catfish.x - catfish.r, catfish.y, COLORS.highlight, 'bubble');
+        }
+    }
+}
+
+// --- Game Logic ---
+function resetWorld() {
+    worldX = 0; speedMultiplier = 1.0; runTime = 0;
+    sharks = []; vultures = []; insects = []; particles = []; envObjects = []; floatingTexts = [];
+    nextSharkX = W * 1.5; nextVultureX = W * 2; nextInsectX = W * 0.8;
+    for(let i=0; i<10; i++) envObjects.push(createEnvObj(Math.random()*W));
+}
+
+function resetGameLogic() {
+    resetWorld();
+    currentRun = { score: 0, insects: 0, maxCombo: 0, distance: 0, survivalTime: 0, history: [], newAchievements: [] };
+    comboCount = 0; comboTimer = 0;
+    catfish = {
+        x: W * 0.25, y: waterY + (bottomY - waterY)*0.45, vy: 0, r: Math.max(15, H * 0.035),
+        animPhase: 0, dead: false, attachedTo: null, lastJumpTime: 0, inWater: true
+    };
+}
+
+function createEnvObj(x) {
+    let isBg = Math.random() > 0.3; let type = Math.random();
+    let obj = { x, isBg, phase: Math.random()*Math.PI*2 };
+    if (type < 0.3) { obj.kind = 'fish'; obj.y = waterY + 50 + Math.random()*(bottomY-waterY-100); obj.s = Math.random()*8+4; obj.spd = BASE_SPEED*(0.2+Math.random()*0.3); }
+    else if (type < 0.7) { obj.kind = 'plant'; obj.h = H*(0.1+Math.random()*0.2); }
+    else { obj.kind = 'bubble'; obj.y = bottomY; obj.s = Math.random()*3+2; obj.spd = 50 + Math.random()*100; }
+    return obj;
+}
+
+function spawnParticle(x, y, color, kind) {
+    particles.push({
+        x, y, vx: (Math.random()-0.5)*200, vy: (Math.random()-0.5)*200 - (kind==='splash'?100:0),
+        life: 1.0, color, kind, s: Math.max(0.1, Math.random()*3+2)
+    });
+}
+
+// Memory-leak proof floating text drawn directly on canvas
+function spawnFloatingText(x, y, txt, isCombo) {
+    floatingTexts.push({ x, y, txt, isCombo, life: 1.0 });
+}
+
+function updateGame(dt) {
+    runTime += dt;
+    if (speedMultiplier < 2.0 && currentState === GAME_STATES.PLAYING) speedMultiplier += dt * (1.0 / 120.0);
+    
+    let curSpeed = BASE_SPEED * speedMultiplier;
+    worldX += curSpeed * dt;
+
+    if(currentState === GAME_STATES.PLAYING) {
+        currentRun.distance += (curSpeed * dt)/100;
+        currentRun.score += dt * 10 * speedMultiplier;
+        currentRun.survivalTime = runTime;
+    }
+
+    // Combos
+    if (comboCount > 0) {
+        comboTimer -= dt;
+        if (comboTimer <= 0) {
+            if (comboCount >= 2) {
+                let bonus = comboCount * 50;
+                currentRun.score += bonus;
+                if(currentState === GAME_STATES.PLAYING) spawnFloatingText(catfish.x, catfish.y-40, `COMBO x${comboCount}`, true);
+                playSound('combo');
+                if (comboCount >= 5) checkAchievement('swarm_master');
+            }
+            if(comboCount > currentRun.maxCombo) currentRun.maxCombo = comboCount;
+            comboCount = 0;
+        }
+    }
+
+    // Catfish Custom Physics
+    if (currentState === GAME_STATES.PLAYING && !catfish.dead) {
+        let grav;
+        let timeSinceJump = runTime - catfish.lastJumpTime;
+        
+        if (catfish.y <= waterY) {
+            grav = H * 4.5;
+            catfish.vy *= 0.98;
+        } else {
+            let midWater = waterY + (bottomY - waterY) * 0.4;
+            if (timeSinceJump < 0.6 && catfish.y < midWater) { grav = H * 0.2; } else { grav = H * 0.9; }
+            catfish.vy *= 0.92;
+        }
+        
+        catfish.vy += grav * dt;
+        catfish.y += catfish.vy * dt;
+        catfish.animPhase += dt * (10 + speedMultiplier*5);
+        
+        if (catfish.y < waterY && catfish.inWater !== false) { catfish.inWater = false; for(let i=0; i<6; i++) spawnParticle(catfish.x, waterY, COLORS.highlight, 'splash'); }
+        if (catfish.y > waterY && catfish.inWater !== true) { catfish.inWater = true; for(let i=0; i<6; i++) spawnParticle(catfish.x, waterY, COLORS.highlight, 'splash'); }
+        if (catfish.y > bottomY - catfish.r) { catfish.y = bottomY - catfish.r; catfish.vy = 0; }
+        
+        // Hard Ceiling Logic
+        if (catfish.y < ceilingY + catfish.r) { 
+            catfish.y = ceilingY + catfish.r; 
+            catfish.vy = Math.max(0, catfish.vy); 
+        }
+        
+    } else if (currentState === GAME_STATES.DEATH_ANIM && catfish.attachedTo) {
+        let p = catfish.attachedTo;
+        if(p.kind === 'shark') { catfish.x = p.x - worldX + p.w*0.3; catfish.y = p.y; catfish.animPhase += dt*20; }
+        if(p.kind === 'vulture') { catfish.x = p.x - worldX; catfish.y = p.y + p.h*0.5; }
+    }
+
+    const difficulty = Math.min(1, runTime / 120);
+    
+    // Spawning (Sharks)
+    if (worldX + W > nextSharkX) {
+        let sHeight = Math.max(20, H*0.08);
+        let spawnY;
+        if (speedMultiplier > 1.4 && Math.random() < 0.20) {
+            spawnY = waterY + sHeight/2 + Math.random() * 20; 
+        } else {
+            let centerWater = waterY + (bottomY - waterY) / 2;
+            spawnY = centerWater + sHeight/2 + Math.random()*(bottomY - centerWater - sHeight - 20);
+        }
+        
+        sharks.push({
+            x: nextSharkX, y: spawnY,
+            w: Math.max(40, W*0.12), h: sHeight, 
+            spd: curSpeed * (0.2 + Math.random()*0.3 + difficulty*0.2), 
+            phase: Math.random()*10, kind: 'shark'
+        });
+        nextSharkX += W * (0.8 + Math.random()*1.0 - difficulty*0.4);
+    }
+    
+    // Spawning (Vultures)
+    if (worldX + W > nextVultureX) {
+        vultures.push({
+            x: nextVultureX, y: ceilingY + 15, 
+            w: Math.max(30, W*0.1), h: Math.max(20, H*0.06), 
+            spd: curSpeed * (0.3 + Math.random()*0.4 + difficulty*0.2), 
+            phase: Math.random()*10, kind: 'vulture'
+        });
+        nextVultureX += W * (1.0 + Math.random()*1.5 - difficulty*0.5);
+    }
+    
+    // Spawning (Insects)
+    if (worldX + W > nextInsectX) {
+        let count = Math.random() > 0.7 ? Math.floor(Math.random()*4+2) : 1;
+        let maxAirHeight = waterY - ceilingY - 40; 
+        let baseY = waterY - H*0.05 - Math.random() * maxAirHeight;
+        if (baseY < ceilingY + 30) baseY = ceilingY + 30; 
+        
+        for(let i=0; i<count; i++) {
+            insects.push({ x: nextInsectX + i*40 + (Math.random()*20-10), y: baseY + (Math.random()*40-20), active: true, phase: Math.random()*10 });
+        }
+        nextInsectX += W * (0.5 + Math.random()*0.8);
+    }
+
+    if (Math.random() < 0.05) envObjects.push(createEnvObj(worldX + W + 100));
+
+    // Entities Logic
+    updateEntities(dt, sharks, curSpeed);
+    updateEntities(dt, vultures, curSpeed);
+    
+    for (let i = insects.length - 1; i >= 0; i--) {
+        let ins = insects[i]; if (!ins.active) continue;
+        let sx = ins.x - worldX;
+        if (sx < -50) { insects.splice(i,1); continue; }
+        ins.y += Math.sin(runTime*5 + ins.phase)*0.5;
+        
+        if (currentState === GAME_STATES.PLAYING && !catfish.dead) {
+            let dx = catfish.x - sx, dy = catfish.y - ins.y;
+            if (dx*dx + dy*dy < (catfish.r + 20)*(catfish.r + 20)) {
+                ins.active = false; currentRun.insects++; currentRun.score += 100; comboCount++; comboTimer = 1.5;
+                playSound('insect'); spawnFloatingText(catfish.x, ins.y, '+100', false);
+                for(let p=0; p<4; p++) spawnParticle(sx, ins.y, COLORS.gold, 'spark');
+            }
+        }
+    }
+
+    for (let i = envObjects.length - 1; i >= 0; i--) {
+        let o = envObjects[i];
+        if(o.kind==='fish') o.x -= o.spd * dt;
+        if(o.kind==='bubble') { o.y -= o.spd * dt; o.x += Math.sin(runTime*3+o.phase)*0.5; }
+        if (o.x - worldX < -100 || o.y < -50) envObjects.splice(i,1);
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i];
+        p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt * (p.kind==='spark'?1.5:1.0);
+        if (p.life <= 0) particles.splice(i,1);
+    }
+    
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        let ft = floatingTexts[i];
+        ft.life -= dt; ft.y -= dt * 60;
+        if (ft.life <= 0) floatingTexts.splice(i,1);
+    }
+
+    if (currentState === GAME_STATES.PLAYING) {
+        document.getElementById('hud-score').innerText = Math.floor(currentRun.score).toLocaleString();
+        document.getElementById('hud-speed').innerText = speedMultiplier.toFixed(2) + '×';
+        document.getElementById('hud-insects').innerText = currentRun.insects;
+        
+        if (Math.floor(runTime * 10) % 10 === 0 && runTime > currentRun.history.length) {
+            currentRun.history.push({ time: Math.floor(runTime), score: Math.floor(currentRun.score), speed: speedMultiplier, insects: currentRun.insects });
+            Object.keys(ACHIEVEMENTS).forEach(k => checkAchievement(k));
+        }
+    }
+}
+
+function updateEntities(dt, arr, curSpeed) {
+    for (let i = arr.length - 1; i >= 0; i--) {
+        let e = arr[i]; e.x -= e.spd * dt; e.phase += dt * 5; let sx = e.x - worldX;
+        
+        if (e.kind === 'vulture') e.y += Math.sin(e.phase)*0.5;
+        if (sx < -e.w*2) { arr.splice(i,1); continue; }
+        
+        if (currentState === GAME_STATES.PLAYING && !catfish.dead) {
+            let hitboxR = Math.max(0.1, Math.min(e.w, e.h)*0.4);
+            let dx = catfish.x - (sx + e.w*0.5); let dy = catfish.y - e.y;
+            if (dx*dx + dy*dy < (catfish.r + hitboxR)*(catfish.r + hitboxR)) triggerDeath(e);
+        }
+    }
+}
+
+function triggerDeath(predator) {
+    currentState = GAME_STATES.DEATH_ANIM;
+    catfish.dead = true; catfish.attachedTo = predator;
+    playSound('death');
+    for(let i=0; i<20; i++) spawnParticle(catfish.x, catfish.y, COLORS.danger, 'spark');
+    setTimeout(() => { catfish.attachedTo = null; showUnifiedResults(); }, 2000);
+}
+
+// --- Run / Session Results ---
+function showUnifiedResults() {
+    currentState = GAME_STATES.RUN_OVER;
+    document.getElementById('hud').style.opacity = '0';
+    
+    if(currentRun.score > userStorage.personalBest.score) userStorage.personalBest.score = currentRun.score;
+    if(speedMultiplier > userStorage.personalBest.speed) userStorage.personalBest.speed = speedMultiplier;
+    saveStorage();
+
+    sessionResults.push({
+        score: currentRun.score, insects: currentRun.insects, speed: speedMultiplier,
+        time: currentRun.survivalTime, history: currentRun.history
+    });
+    if(sessionResults.length > 10) sessionResults.shift();
+
+    document.getElementById('st-score').innerText = Math.floor(currentRun.score).toLocaleString();
+    document.getElementById('st-insects').innerText = currentRun.insects;
+    document.getElementById('st-speed').innerText = speedMultiplier.toFixed(2) + '×';
+    document.getElementById('st-combo').innerText = currentRun.maxCombo;
+    document.getElementById('st-dist').innerText = Math.floor(currentRun.distance).toLocaleString() + 'm';
+    
+    let mins = Math.floor(currentRun.survivalTime / 60).toString().padStart(2, '0');
+    let secs = Math.floor(currentRun.survivalTime % 60).toString().padStart(2, '0');
+    document.getElementById('st-time').innerText = `${mins}:${secs}`;
+
+    let achList = document.getElementById('st-ach-list');
+    if (currentRun.newAchievements.length > 0) {
+        achList.innerHTML = currentRun.newAchievements.map(id => `• ${ACHIEVEMENTS[id].title}`).join('<br>');
+        document.getElementById('st-achievements').style.display = 'block';
+    } else {
+        document.getElementById('st-achievements').style.display = 'none';
+    }
+
+    showPanel('panel-results');
+    setTimeout(drawGraphs, 50);
+}
+
+// --- Rendering ---
+function draw() {
+    ctx.fillStyle = COLORS.bg; ctx.fillRect(0, 0, W, H);
+    let grad = ctx.createLinearGradient(0, waterY, 0, H);
+    grad.addColorStop(0, COLORS.mid); grad.addColorStop(1, COLORS.deep);
+    ctx.fillStyle = grad; ctx.fillRect(0, waterY, W, H - waterY);
+    
+    ctx.fillStyle = 'rgba(104, 200, 215, 0.15)'; ctx.fillRect(0, waterY, W, 4);
+    ctx.fillStyle = 'rgba(255,255,255,0.05)'; ctx.fillRect(0, waterY+4, W, Math.sin(runTime*2)*5 + 5);
+
+    ctx.save();
+    envObjects.forEach(o => {
+        if(o.kind === 'fish') {
+            let sx = o.x - worldX*0.3; if(sx>-50 && sx<W+50) drawBgFish(sx, o.y, o.s, o.phase);
+        } else if(o.kind === 'plant' && o.isBg) {
+            let sx = o.x - worldX*0.6; if(sx>-50 && sx<W+50) drawPlant(sx, o.h, o.phase, 0.5);
+        }
+    });
+    ctx.restore();
+
+    ctx.save();
+    ctx.fillStyle = COLORS.deep; ctx.beginPath(); ctx.moveTo(0, bottomY);
+    for(let i=0; i<=W; i+=100) { ctx.lineTo(i, bottomY + Math.sin((worldX+i)*0.005)*15); }
+    ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.fill();
+
+    envObjects.forEach(o => {
+        if(o.kind === 'plant' && !o.isBg) { let sx = o.x - worldX; if(sx>-50 && sx<W+50) drawPlant(sx, o.h, o.phase, 1.0); }
+    });
+
+    insects.forEach(ins => {
+        if(!ins.active) return;
+        let sx = ins.x - worldX; if(sx<-50 || sx>W) return;
+        ctx.fillStyle = COLORS.gold; ctx.beginPath(); ctx.arc(sx, ins.y, 4, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = 'rgba(255,255,255,0.7)'; let wS = Math.max(0.1, Math.abs(Math.sin(runTime*30 + ins.phase)*6));
+        ctx.beginPath(); ctx.ellipse(sx-4, ins.y-2, 4, wS, Math.PI/4, 0, Math.PI*2); ctx.ellipse(sx+4, ins.y-2, 4, wS, -Math.PI/4, 0, Math.PI*2); ctx.fill();
+    });
+
+    sharks.forEach(s => { let sx = s.x - worldX; if(sx<-s.w*2 || sx>W) return; drawShark(sx, s.y, s.w, s.h, s.phase); });
+    vultures.forEach(v => { let sx = v.x - worldX; if(sx<-v.w*2 || sx>W) return; drawVulture(sx, v.y, v.w, v.h, v.phase); });
+
+    if ((currentState === GAME_STATES.PLAYING || currentState === GAME_STATES.DEATH_ANIM) && catfish && !catfish.attachedTo) {
+        drawCatfish(catfish.x, catfish.y, catfish.r, catfish.vy, catfish.animPhase);
+    } else if (currentState === GAME_STATES.DEATH_ANIM && catfish.attachedTo) {
+        ctx.globalAlpha = 0.5; drawCatfish(catfish.x, catfish.y, catfish.r, 0, catfish.animPhase); ctx.globalAlpha = 1.0;
+    }
+
+    particles.forEach(p => { ctx.globalAlpha = Math.max(0, p.life); ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.s, 0, Math.PI*2); ctx.fill(); });
+    envObjects.forEach(o => { if(o.kind === 'bubble') { let sx = o.x - worldX; ctx.strokeStyle = 'rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(sx, o.y, o.s, 0, Math.PI*2); ctx.stroke(); } });
+    
+    // Draw safe floating texts on canvas instead of DOM
+    floatingTexts.forEach(ft => {
+        ctx.globalAlpha = Math.max(0, ft.life);
+        ctx.fillStyle = ft.isCombo ? COLORS.accent : COLORS.gold;
+        ctx.font = "bold 24px 'Segoe UI', sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText(ft.txt, ft.x, ft.y);
+    });
+
+    ctx.globalAlpha = 1.0; ctx.restore();
+}
+
+function drawCatfish(x, y, r, vy, phase) {
+    ctx.save(); ctx.translate(x, y);
+    let rot = vy * 0.001; if(rot>0.5) rot=0.5; if(rot<-0.5) rot=-0.5; ctx.rotate(rot);
+    let tailA = Math.sin(phase)*0.3; let bodyW = Math.sin(phase-1)*0.1;
+    
+    ctx.fillStyle = COLORS.fin; ctx.beginPath(); ctx.ellipse(Math.max(0.1, -r*0.2), Math.max(0.1, r*0.6), Math.max(0.1, r*0.7), Math.max(0.1, r*0.3), Math.PI/6 + bodyW, 0, Math.PI*2); ctx.fill();
+    ctx.save(); ctx.translate(-r*1.5, 0); ctx.rotate(tailA); ctx.fillStyle = COLORS.catfish;
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-r*1.2, -r*0.8); ctx.quadraticCurveTo(-r*1.5, 0, -r*1.2, r*0.8); ctx.fill(); ctx.restore();
+    ctx.fillStyle = COLORS.catfish; ctx.beginPath(); ctx.ellipse(0,0, Math.max(0.1, r*1.8), Math.max(0.1, r), bodyW, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = COLORS.catfishBelly; ctx.beginPath(); ctx.ellipse(0, Math.max(0.1, r*0.4), Math.max(0.1, r*1.6), Math.max(0.1, r*0.5), bodyW, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = COLORS.catfish; ctx.beginPath(); ctx.moveTo(0, -r*0.8); ctx.quadraticCurveTo(r*0.5, -r*1.5, r*0.8, -r*0.5); ctx.fill();
+    ctx.fillStyle = COLORS.bg; ctx.beginPath(); ctx.arc(Math.max(0.1, r*1.1), -r*0.2, Math.max(0.1, r*0.12), 0, Math.PI*2); ctx.fill();
+    ctx.strokeStyle = COLORS.fin; ctx.lineWidth = 2; let wSway = Math.sin(phase*1.5)*r*0.3;
+    ctx.beginPath(); ctx.moveTo(r*1.6, 0); ctx.quadraticCurveTo(r*2.2, r*0.5+wSway, r*2.8, r*0.8+wSway); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(r*1.4, r*0.5); ctx.quadraticCurveTo(r*1.8, r*0.8+wSway, r*2.0, r*1.2+wSway); ctx.stroke();
+    ctx.fillStyle = COLORS.catfish; ctx.beginPath(); ctx.ellipse(Math.max(0.1, r*0.2), Math.max(0.1, r*0.6), Math.max(0.1, r*0.8), Math.max(0.1, r*0.4), -Math.PI/8 + bodyW, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+}
+
+function drawShark(x, y, w, h, phase) {
+    ctx.save(); ctx.translate(x + w*0.5, y);
+    let tailA = Math.sin(phase)*0.2; ctx.fillStyle = COLORS.predator;
+    ctx.beginPath(); ctx.moveTo(w*0.3, 0); ctx.lineTo(w*0.6, -h*0.5 + tailA*h); ctx.lineTo(w*0.6, h*0.5 + tailA*h); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, 0, Math.max(0.1, w*0.4), Math.max(0.1, h*0.4), 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-w*0.1, -h*0.3); ctx.lineTo(-w*0.2, -h*0.8); ctx.lineTo(w*0.1, -h*0.3); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(w*0.2, -h*0.2); ctx.lineTo(-w*0.4, -h*0.1); ctx.lineTo(-w*0.5, 0); ctx.lineTo(-w*0.3, h*0.2); ctx.fill();
+    ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(-w*0.35, -h*0.05, Math.max(0.1, h*0.05), 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+}
+
+function drawVulture(x, y, w, h, phase) {
+    ctx.save(); ctx.translate(x + w*0.5, y);
+    let wingY = Math.sin(phase)*h*0.8; ctx.fillStyle = COLORS.predator;
+    ctx.beginPath(); ctx.ellipse(0, 0, Math.max(0.1, w*0.3), Math.max(0.1, h*0.3), 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(-w*0.1, 0); ctx.quadraticCurveTo(-w*0.2, wingY*1.5, -w*0.6, wingY); ctx.lineTo(0, wingY*0.5); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(w*0.2, wingY*1.5, w*0.6, wingY); ctx.lineTo(w*0.1, wingY*0.5); ctx.fill();
+    ctx.beginPath(); ctx.arc(-w*0.3, 0, Math.max(0.1, h*0.2), 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = COLORS.danger; ctx.beginPath(); ctx.moveTo(-w*0.35, 0); ctx.lineTo(-w*0.5, h*0.2); ctx.lineTo(-w*0.3, h*0.1); ctx.fill();
+    ctx.restore();
+}
+
+function drawPlant(x, h, phase, alpha) {
+    ctx.strokeStyle = COLORS.plant; ctx.globalAlpha = alpha; ctx.lineWidth = 4;
+    let segs = 4, sH = h/segs, cX = x, cY = bottomY;
+    ctx.beginPath(); ctx.moveTo(cX, cY);
+    for(let i=1; i<=segs; i++) { let sway = Math.sin(runTime*2 + phase + i)*10; ctx.lineTo(cX+sway, cY - sH*i); cX+=sway; cY-=sH; }
+    ctx.stroke(); ctx.globalAlpha = 1.0;
+}
+
+function drawBgFish(x, y, s, phase) {
+    ctx.fillStyle = COLORS.fish;
+    ctx.beginPath(); ctx.ellipse(x, y + Math.sin(phase)*5, Math.max(0.1, s), Math.max(0.1, s*0.4), 0, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(x+s*0.8, y+Math.sin(phase)*5); ctx.lineTo(x+s*1.5, y+Math.sin(phase)*5 - s*0.5); ctx.lineTo(x+s*1.5, y+Math.sin(phase)*5 + s*0.5); ctx.fill();
+}
+
+// --- Bulletproof Execution Wrapper ---
+function loop(timestamp) {
+    try {
+        if (!lastTime) lastTime = timestamp;
+        let dt = (timestamp - lastTime) / 1000;
+        if (dt > 0.05) dt = 0.05;
+        if (dt < 0) dt = 0;
+        lastTime = timestamp;
+        
+        updateGame(dt); 
+        draw();
+    } catch(e) {
+        console.warn("Failsafe caught loop error: ", e);
+    }
+    requestAnimationFrame(loop);
+}
+
+// --- Graph Logic ---
+function drawGraphs() {
+    const gc = document.getElementById('graph-canvas');
+    if (!gc) return;
+    const gctx = gc.getContext('2d');
+    const rect = gc.getBoundingClientRect();
+    if(rect.width === 0 || rect.height === 0) return; 
+    
+    gc.width = rect.width * dpr; gc.height = rect.height * dpr; gctx.scale(dpr, dpr);
+    let gw = rect.width, gh = rect.height;
+    
+    gctx.clearRect(0,0,gw,gh);
+    let maxT = 10, maxS = 100; 
+    sessionResults.forEach(r => {
+        if(r.history.length>0) {
+            let last = r.history[r.history.length-1];
+            if(last.time > maxT) maxT = last.time;
+            if(last.score > maxS) maxS = last.score;
+        }
+    });
+
+    gctx.strokeStyle = 'rgba(255,255,255,0.1)'; gctx.beginPath();
+    for(let i=0; i<=4; i++) { let y = gh - (i/4)*gh; gctx.moveTo(0, y); gctx.lineTo(gw, y); } gctx.stroke();
+
+    sessionResults.forEach((res, i) => {
+        if(res.history.length===0) return;
+        
+        let isLast = (i === sessionResults.length - 1);
+        gctx.strokeStyle = isLast ? COLORS.accent : 'rgba(255,255,255,0.15)'; 
+        gctx.lineWidth = isLast ? 3 : 1.5; 
+        
+        gctx.beginPath(); gctx.moveTo(0, gh);
+        res.history.forEach(pt => { gctx.lineTo((pt.time/maxT)*gw, gh - (pt.score/maxS)*gh); });
+        let last = res.history[res.history.length-1];
+        gctx.lineTo((last.time/maxT)*gw, gh - (last.score/maxS)*gh); gctx.stroke();
+    });
+}
+
+// Check Achievements
+function checkAchievement(id) {
+    if (userStorage.achievements.includes(id)) return;
+    if (currentRun.newAchievements.includes(id)) return;
+    if (ACHIEVEMENTS[id].check(currentRun)) {
+        currentRun.newAchievements.push(id);
+        userStorage.achievements.push(id);
+        saveStorage();
+        queueToast(ACHIEVEMENTS[id].title, ACHIEVEMENTS[id].desc);
+    }
+}
+function queueToast(title, desc) { toastQueue.push({title, desc}); if(!toastActive) showNextToast(); }
+function showNextToast() {
+    if(toastQueue.length === 0) { toastActive = false; return; }
+    toastActive = true; const t = toastQueue.shift(); playSound('achieve');
+    document.getElementById('toast-title').innerText = t.title; document.getElementById('toast-desc').innerText = t.desc;
+    const el = document.getElementById('toast'); el.classList.add('show');
+    setTimeout(() => { el.classList.remove('show'); setTimeout(showNextToast, 500); }, 3000);
+}
+
+// Start Engine
+init();
+
+</script>
+</body>
+</html>
