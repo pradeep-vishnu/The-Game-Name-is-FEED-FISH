@@ -1,17 +1,15 @@
 <div align="center">
 
 <h1>🐟 FEED FISH </h1>
-<video autoplay loop muted playsinline width="600">
-  <img src="demo.gif" width="600">
-</video>
-</div>
+
+<div align="center"> <img src="demo.gif" width="600"> </div>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-gold.svg)](LICENSE)
 [![Dependencies: None](https://img.shields.io/badge/Dependencies-Zero-emerald.svg)]()
 [![Platform: Web](https://img.shields.io/badge/Platform-Web%20%7C%20Mobile-blue.svg)]()
 
 <h1> 🎮 Play the Game </h1>
-**No installation required!** 
+No installation required!
 Simply download or clone this repository and open `index.html` in any modern desktop or mobile browser. 
 
 Play here : [FEED-FISH](https://pradeep-vishnu.github.io/The-Game-Name-is-FEED-FISH/)
