@@ -2,16 +2,13 @@
 
 A fast-paced, minimalist HTML5 arcade survival game built entirely in a single file with zero dependencies. Balance gravity, hunt golden insect swarms, and dodge predators in a living, procedurally generated ocean.
 
-## 🏷️ Topics
-`html5-game` `canvas-api` `vanilla-javascript` `arcade-game` `web-audio-api` `procedural-generation` `zero-dependencies` `responsive-design`
-
 ---
 
 ## 🎮 Play the Game
 **No installation required!** 
 Simply download or clone this repository and open `index.html` in any modern desktop or mobile browser. 
 
-👉 **[Play Live Demo]** *(Link your GitHub Pages URL here if you host it)*
+👉 **[Play Live]** *(https://pradeep-vishnu.github.io/The-Game-Name-is-FEED-FISH/)*
 
 ---
 
