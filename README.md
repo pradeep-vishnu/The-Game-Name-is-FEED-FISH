@@ -1,4 +1,4 @@
-<div align="center"> # 
+<div align="center">
 
 <h1>🐟 FEED FISH </h1>
 
