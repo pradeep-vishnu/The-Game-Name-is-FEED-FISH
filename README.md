@@ -9,7 +9,7 @@
 [![Dependencies: None](https://img.shields.io/badge/Dependencies-Zero-emerald.svg)]()
 [![Platform: Web](https://img.shields.io/badge/Platform-Web%20%7C%20Mobile-blue.svg)]()
 
-[**PLAY NOW**](#-quick-start) • [**HOW TO PLAY**](#-how-to-play) • [**FEATURES**](#-Features)
+[**PLAY NOW**](#-Quick-Start) • [**HOW TO PLAY**](#-How-to-Play) • [**FEATURES**](#-Features)
 
 </div>
 
@@ -53,7 +53,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 🚀🎮  Quick Start
+## 🎮  Quick Start
 
 No package managers, build steps, or server setups required.
 Play here : [FEED-FISH](https://pradeep-vishnu.github.io/The-Game-Name-is-FEED-FISH/)
