@@ -1,9 +1,9 @@
-# 🐟 Feed Catfish
-
-A fast-paced, minimalist HTML5 arcade survival game built entirely in a single file with zero dependencies. Balance gravity, hunt golden insect swarms, and dodge predators in a living, procedurally generated ocean.
-
+<div align="center"> # 🐟 FEED FISH 
 ---
-
+<video autoplay loop muted playsinline width="600">
+  <source src="assets/demo.mp4" type="video/quicktime">
+</video>
+</div>
 ## 🎮 Play the Game
 **No installation required!** 
 Simply download or clone this repository and open `index.html` in any modern desktop or mobile browser. 
