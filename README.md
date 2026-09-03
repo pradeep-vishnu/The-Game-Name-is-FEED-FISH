@@ -1,8 +1,9 @@
-<div align="center"> # 🐟 FEED FISH 
----
+<div> align="center"> # 🐟 FEED FISH 
+
 <video autoplay loop muted playsinline width="600">
-  <source src="assets/demo.mp4" type="video/quicktime">
+  <source src="demo.mp4" type="video/quicktime">
 </video>
+
 </div>
 ## 🎮 Play the Game
 **No installation required!** 
